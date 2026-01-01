@@ -1,22 +1,59 @@
-import { useEffect, useRef } from "react"
-
+import { useRef, useState } from "react";
+import useSocket from "./hooks/useSocket"
+import generateCode from "./utils/random-code";
 function App() {
-  const socketRef = useRef<WebSocket>(null)
-  socketRef.current.onmessage = (ev)=>{
-
-  }
-  useEffect(()=>{
-    const ws = new WebSocket("ws://localhost:8080")
-    socketRef.current = ws
-    return ()=>{
-      socketRef.current?.close()
+  const {message,sendMessage,socketState} =  useSocket("ws://localhost:8080")
+  const [roomId, setRoomId] = useState<string>();
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [showCode,setShowCode] = useState<boolean>(false)
+  const createRoom = ()=>{
+    const code = generateCode()
+    setRoomId(code)
+    if(inputRef.current){
+      inputRef.current.value =code
     }
-  },[])
+    setShowCode(true)
+    
+  }
+  const joinRoom = () => {
+    sendMessage(`
+      {
+      type:"join",
+      payload:"${roomId}"
+      }
+      `)
+  }
   return (
-    <div className="w-full h-full">
-
+    <div className="w-full h-screen bg-black text-white flex justify-center items-center">
+      <div className="border rounded border-white/20 max-w-xl w-full p-5 space-y-2">
+        <p className="text-center text-3xl text-white/70 font-bold">
+          The Chat Room
+        </p>
+        <p className="text-center text-sm text-white/70">
+          Enter room code and join or create a room
+        </p>
+        <div className="flex-col flex sm:flex sm:flex-row  justify-center gap-2 min-w-3xs">
+          <input
+            type="text"
+            className="  rounded py-2 ring-1 ring-white/20 focus:outline-none uppercase px-2"
+            autoCapitalize={"characters"}
+            onChange={(e) => setRoomId(e.target.value)}
+            ref={inputRef}
+          />
+          <div className="border px-3 py-2 border-white/20 rounded flex items-center justify-center cursor-pointer" onClick={joinRoom}>Join</div>
+        </div>
+        <div className="flex justify-center items-center">
+          <button className="border border-white/20 rounded px-4 py-2 min-w-3xs cursor-pointer" onClick={createRoom}>
+            Create a room
+          </button>
+        </div>
+        {showCode && <div className="bg-white/10 py-4 space-y-2 mt-6">
+        <p className="font-semibold text-base text-center  rounded">Room code share with your friends</p>
+        <p className=" uppercase text-3xl font-semibold text-center" >{roomId}</p>
+        </div>}
+      </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
