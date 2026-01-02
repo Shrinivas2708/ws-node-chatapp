@@ -14,22 +14,20 @@ const useSocket = (url: string) => {
   };
   useEffect(() => {
     socket.current = new WebSocket(url);
-    console.log("reached here");
 
     socket.current.onopen = () => {
       setSocketSet(WebSocket.OPEN);
     };
     socket.current.onclose = () => {
-      console.log("reached onclose");
       setSocketSet(WebSocket.CLOSED);
     };
     socket.current.onmessage = (ev) => {
        setTotalMessage((prev)=>[...prev,
-        
         {
         type:"socket",
         message:`${ev.data}`
-       }])
+       }
+      ])
     };
 
     socket.current.onerror = (error) => {
@@ -37,7 +35,6 @@ const useSocket = (url: string) => {
     };
 
     return () => {
-      console.log("reached cleanup ");
       socket.current?.close();
     };
   }, [url]);

@@ -1,6 +1,7 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import useSocket from "./hooks/useSocket";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import ExitIcon from "./assets/Exit";
 
 function Chat() {
   const {  sendMessage, socketState ,totalMessage,setTotalMessage} = useSocket(
@@ -10,6 +11,7 @@ function Chat() {
   const [userMessage, setUserMessage] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null)
   const divRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   useEffect(()=>{
     if(divRef.current){
         divRef.current.scrollIntoView({ behavior: "smooth" })
@@ -24,7 +26,6 @@ function Chat() {
       })
     );
   }, [socketState]);
-console.log(totalMessage);
 
 
   const handleSend = ()=>{
@@ -52,9 +53,17 @@ console.log(totalMessage);
         handleSend()
     }
   }
+  const handleLeave = () => {
+    if(socketState != WebSocket.OPEN) return
+    sendMessage(JSON.stringify({
+      type:"exit"
+    }))
+    navigate("/")
+  }
   return (
     <div className="bg-black min-h-screen w-full text-white flex justify-center">
       <div className="flex flex-col w-full max-w-3xl min-h-screen px-2 sm:px-4">
+        <div className="flex border border-red-400 text-red-400 fixed p-1 rounded gap-2 justify-center items-center right-5 top-3 cursor-pointer " onClick={handleLeave}>Leave <ExitIcon size={20} /> </div>
         <div className="flex-1 overflow-y-auto border-x border-white/10 py-3 px-2 " >
          {
             totalMessage.map((msg ,id)=> {
