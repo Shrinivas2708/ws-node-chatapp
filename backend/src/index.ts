@@ -26,7 +26,7 @@
         if (!roomToSockets.has(parsedMessage.payload)) {
             roomToSockets.set(parsedMessage.payload, new Set());
         }
-        roomToSockets.get(parsedMessage.payload)?.add(socket);
+        roomToSockets.get(parsedMessage.payload)?.add(socket); 
         socketsToRoom.set(socket, parsedMessage.payload);
         }
         if (parsedMessage.type === "chat") {
