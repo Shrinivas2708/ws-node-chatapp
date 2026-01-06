@@ -15,9 +15,32 @@ type Message =
 const ws = new WebSocketServer({ port: 8080 }, () => {
   console.log("Socket server running on 8080");
 });
+const heartBeat = setInterval(() => {
+  ws.clients.forEach((socket) => {
+    const s = socket as any;
+    if (s.isAlive === false) return socket.terminate();
+    s.isAlive = false;
+    socket.ping();
+  });
+}, 30_000);
+
 const roomToSockets = new Map<string, Set<WebSocket>>();
 const socketsToRoom = new Map<WebSocket, string>();
+const cleanup = (socket: WebSocket) => {
+  const roomId = socketsToRoom.get(socket);
+  socketsToRoom.delete(socket);
+  if (!roomId) return;
+  const sockets = roomToSockets.get(roomId);
+  sockets?.delete(socket);
+  if (sockets?.size === 0) roomToSockets.delete(roomId);
+};
 ws.on("connection", (socket) => {
+  (socket as any).isAlive = true;
+
+  socket.on("pong", () => {
+    (socket as any).isAlive = true;
+  });
+
   socket.on("message", (event) => {
     let parsedMessage: Message;
     try {
@@ -39,7 +62,7 @@ ws.on("connection", (socket) => {
     if (parsedMessage.type === "chat") {
       const roomId = socketsToRoom.get(socket);
       if (!roomId) return;
-      if(!parsedMessage.message || typeof parsedMessage === "string") return
+      if (!parsedMessage.message || typeof parsedMessage === "string") return;
       roomToSockets.get(roomId)?.forEach((v) => {
         console.log(parsedMessage.type === "chat" ? parsedMessage.message : "");
 
@@ -48,20 +71,13 @@ ws.on("connection", (socket) => {
       });
     }
     if (parsedMessage.type === "exit") {
-      const roomId = socketsToRoom.get(socket);
-      socketsToRoom.delete(socket);
-      if (!roomId) return;
-      const sockets = roomToSockets.get(roomId);
-      sockets?.delete(socket);
-      if (sockets?.size === 0) roomToSockets.delete(roomId);
+      cleanup(socket);
     }
   });
   socket.on("close", () => {
-    const roomId = socketsToRoom.get(socket);
-    socketsToRoom.delete(socket);
-    if (!roomId) return;
-    const sockets = roomToSockets.get(roomId);
-    sockets?.delete(socket);
-    if (sockets?.size === 0) roomToSockets.delete(roomId);
+    cleanup(socket);
   });
+});
+ws.on("close", () => {
+  clearInterval(heartBeat);
 });
