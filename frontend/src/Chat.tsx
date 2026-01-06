@@ -22,7 +22,7 @@ function Chat() {
     sendMessage(
       JSON.stringify({
         type: "join",
-        payload: `${params.roomid}`,
+        roomId: `${params.roomid}`,
       })
     );
   }, [socketState]);
@@ -34,7 +34,7 @@ function Chat() {
     sendMessage(
       JSON.stringify({
         type: "chat",
-        payload: `${userMessage}`,
+        message: `${userMessage}`,
       })
     );
     setTotalMessage((prev)=>[...prev,
