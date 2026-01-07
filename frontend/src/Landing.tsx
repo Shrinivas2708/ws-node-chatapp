@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import generateCode from "./utils/random-code";
 import { useNavigate } from "react-router-dom";
 function Landing() {
@@ -16,8 +16,19 @@ function Landing() {
     
   }
   const joinRoom = () => {
+   if(!roomId) return
+    
     navigate(`/chat/${roomId}`)
   }
+  const handleLogout = () =>{
+    localStorage.removeItem("token")
+    navigate("/login")
+  }
+  useEffect(()=>{
+      if(!localStorage.getItem("token")){
+          navigate("/login")
+      }
+    },[])
   return (
     <div className="w-full h-screen bg-black text-white flex justify-center items-center">
       <div className="border rounded border-white/20 max-w-xl w-full p-5 space-y-2">
@@ -37,9 +48,12 @@ function Landing() {
           />
           <div className="border px-3 py-2 border-white/20 rounded flex items-center justify-center cursor-pointer" onClick={joinRoom} >Join</div>
         </div>
-        <div className="flex justify-center items-center">
+        <div className="flex flex-col gap-2 justify-center items-center">
           <button className="border border-white/20 rounded px-4 py-2 min-w-3xs cursor-pointer" onClick={createRoom}>
             Create a room
+          </button>
+          <button className="border border-red-500 text-red-500 rounded px-4 py-2 min-w-3xs cursor-pointer" onClick={handleLogout}>
+            Logout
           </button>
         </div>
         {showCode && <div className="bg-white/10 py-4 space-y-2 mt-6">

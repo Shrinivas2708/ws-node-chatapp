@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 interface MessageType {
     type:"socket" | "client",
-    message: string
+    message: string,
+    email?:string
 }
+
 const useSocket = (url: string) => {
   const socket = useRef<WebSocket>(null);
   const [totalMessage,setTotalMessage] = useState<MessageType[]>([])
@@ -21,11 +23,14 @@ const useSocket = (url: string) => {
     socket.current.onclose = () => {
       setSocketSet(WebSocket.CLOSED);
     };
-    socket.current.onmessage = (ev) => {
+    socket.current.onmessage = (ev ) => {
+      const data = JSON.parse(ev.data ) as {message:string,email:string}
+      
        setTotalMessage((prev)=>[...prev,
         {
         type:"socket",
-        message:`${ev.data}`
+        message:`${data.message}`,
+        email:`${data.email}`
        }
       ])
     };
