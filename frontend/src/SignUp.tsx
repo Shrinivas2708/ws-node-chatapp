@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 function SignUp() {
   const [email, setEmail] = useState<string>();
+  const [name, setName] = useState<string>();
   const [password, setPassword] = useState<string>();
   const navigate = useNavigate();
   const handleRegister = async () => {
@@ -12,6 +13,7 @@ function SignUp() {
       const res = await axios.post("http://localhost:5000/register", {
         email,
         password,
+        name
       });
       console.log(res.data);
       const { token } = res.data;
@@ -31,6 +33,12 @@ function SignUp() {
       <div className="border rounded border-white/20 max-w-xl w-full p-5 space-y-4">
         <p className="text-center text-4xl font-semibold">Login</p>
         <div className=" flex flex-col  justify-center gap-3 min-w-3xs ">
+          <input
+            type="name"
+            className="  rounded py-1 ring-1 ring-white/20 focus:outline-none  px-2"
+            placeholder="Enter name"
+            onChange={(e) => setName(e.target.value)}
+          />
           <input
             type="email"
             className="  rounded py-1 ring-1 ring-white/20 focus:outline-none  px-2"

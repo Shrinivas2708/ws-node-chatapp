@@ -8,13 +8,14 @@ import pkg from "jsonwebtoken";
 const { JsonWebTokenError } = pkg;
 import { WebSocketServer, WebSocket } from "ws";
 config();
-// import { pool } from "./db.js";
 
 // pool.query(`CREATE TABLE users(
 //     id UUID PRIMARY KEY  DEFAULT gen_random_uuid(),
 //     email VARCHAR(255),
+//     name VARCHAR(255),
 //     password_hashed VARCHAR(255)
-// )`)
+// )`,()=>{console.log("Done");
+// })
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.SECRET;
 const server = http.createServer((req, res) => {
@@ -40,7 +41,7 @@ const server = http.createServer((req, res) => {
       try {
         const { email, password } = JSON.parse(body);
         const result = await pool.query(
-          "SELECT id, password_hashed FROM users WHERE email = $1",
+          "SELECT id, password_hashed name FROM users WHERE email = $1",
           [email]
         );
         if (result.rowCount === 0) {
@@ -54,7 +55,7 @@ const server = http.createServer((req, res) => {
           return res.end("Invalid credentials");
         }
 
-        const token = jwt.sign({ userId: user.id, email }, JWT_SECRET!);
+        const token = jwt.sign({ userId: user.id, email,name }, JWT_SECRET!);
 
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ token }));
@@ -73,7 +74,7 @@ const server = http.createServer((req, res) => {
     });
     req.on("end", async () => {
       try {
-        const { email, password } = JSON.parse(body);
+        const { email, password,name } = JSON.parse(body);
         const result = await pool.query(
           "SELECT id, password_hashed FROM users WHERE email = $1",
           [email]
@@ -84,12 +85,12 @@ const server = http.createServer((req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const ress = await pool.query(
-          "INSERT INTO users (email,password_hashed) VALUES ($1,$2) RETURNING id",
-          [email, hashedPassword]
+          "INSERT INTO users (email,password_hashed,name) VALUES ($1,$2,$3) RETURNING id",
+          [email, hashedPassword,name]
         );
 
         const user = ress.rows[0];
-        const token = jwt.sign({ userId: user.id, email }, JWT_SECRET!);
+        const token = jwt.sign({ userId: user.id, email,name }, JWT_SECRET!);
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ token }));
       } catch (err) {
@@ -144,6 +145,7 @@ interface AuthedSocket extends WebSocket {
   user?: {
     userId: string;
     email: string;
+    name:string
   };
 }
 
@@ -160,10 +162,12 @@ ws.on("connection", (socket: AuthedSocket, req) => {
     const decoded = jwt.verify(token, JWT_SECRET!) as {
       userId: string;
       email: string;
+      name:string
     };
     socket.user = {
       userId: decoded.userId,
       email: decoded.email,
+      name:decoded.name
     };
   } catch (err) {
     if (err instanceof JsonWebTokenError)
@@ -203,12 +207,13 @@ ws.on("connection", (socket: AuthedSocket, req) => {
 
       roomToSockets.get(roomId)?.forEach((v) => {
         console.log(parsedMessage.message);
-
         if (v != socket)
           v.send(
             JSON.stringify({
               message: parsedMessage.message,
               email: socket.user?.email,
+              name:socket.user?.name,
+              timestamp:new Date()
             })
           );
       });

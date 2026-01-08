@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 interface MessageType {
-    type:"socket" | "client",
-    message: string,
-    email?:string
+  type: "socket" | "client";
+  message: string;
+  email?: string;
+  timestamp?: Date;
+  name?: string;
 }
 
 const useSocket = (url: string) => {
   const socket = useRef<WebSocket>(null);
-  const [totalMessage,setTotalMessage] = useState<MessageType[]>([])
+  const [totalMessage, setTotalMessage] = useState<MessageType[]>([]);
   const [socketState, setSocketSet] = useState<number>(WebSocket.CLOSED);
   const sendMessage = (m: string) => {
     if (socket.current) {
@@ -23,16 +25,24 @@ const useSocket = (url: string) => {
     socket.current.onclose = () => {
       setSocketSet(WebSocket.CLOSED);
     };
-    socket.current.onmessage = (ev ) => {
-      const data = JSON.parse(ev.data ) as {message:string,email:string}
-      
-       setTotalMessage((prev)=>[...prev,
+    socket.current.onmessage = (ev) => {
+      const data = JSON.parse(ev.data) as {
+        message: string;
+        email: string;
+        timestamp: Date;
+        name: string;
+      };
+
+      setTotalMessage((prev) => [
+        ...prev,
         {
-        type:"socket",
-        message:`${data.message}`,
-        email:`${data.email}`
-       }
-      ])
+          type: "socket",
+          message: data.message,
+          email: data.email,
+          name: data.name,
+          timestamp: new Date(data.timestamp),
+        },
+      ]);
     };
 
     socket.current.onerror = (error) => {
@@ -44,7 +54,7 @@ const useSocket = (url: string) => {
     };
   }, [url]);
 
-  return { sendMessage, totalMessage, socketState ,setTotalMessage};
+  return { sendMessage, totalMessage, socketState, setTotalMessage };
 };
 
 export default useSocket;

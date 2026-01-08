@@ -45,6 +45,7 @@ function Chat() {
       {
         type: "client",
         message: `${userMessage}`,
+        timestamp:new Date()
       },
     ]);
     if (inputRef.current) inputRef.current.value = "";
@@ -83,12 +84,12 @@ function Chat() {
             return (
               <div
                 key={id}
-                className={`flex mt-2  ${isSocket ? "flex-col items-start" : "justify-end "}`}
+                className={`flex mt-2  ${isSocket ? "flex-col items-start" : "justify-end flex-col items-end "}`}
               >
                 <p className="p-2 border border-white/30 rounded">
                   {msg.message}
                 </p>
-                {isSocket ? <p className="text-xs text-white/80">from:{msg.email}</p> : ""}
+                {isSocket ? <p className="text-xs text-white/80">sent by {msg.name} at  {msg.timestamp?.toTimeString().split(" ")[0]}</p> : <p className="text-xs text-white/80">{msg.timestamp?.toTimeString().split(" ")[0]}</p>}
               </div>
             );
           })}
