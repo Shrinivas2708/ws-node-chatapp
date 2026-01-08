@@ -84,12 +84,13 @@ function Chat() {
             return (
               <div
                 key={id}
-                className={`flex mt-2  ${isSocket ? "flex-col items-start" : "justify-end flex-col items-end "}`}
+                className={`flex mt-2 group  ${isSocket ? "flex-col items-start" : "justify-end flex-col items-end  "}`}
+                
               >
-                <p className="p-2 border border-white/30 rounded">
+                <p className="p-2 px-3 border border-white/30 rounded-full ">
                   {msg.message}
                 </p>
-                {isSocket ? <p className="text-xs text-white/80">sent by {msg.name} at  {msg.timestamp?.toTimeString().split(" ")[0]}</p> : <p className="text-xs text-white/80">{msg.timestamp?.toTimeString().split(" ")[0]}</p>}
+                {isSocket ? <p className="text-xs text-white/80 invisible group-hover:visible">sent by {msg.name} at  {msg.timestamp?.toTimeString().split(" ")[0]}</p> : <p className="text-xs text-white/80">{msg.timestamp?.toTimeString().split(" ")[0]}</p>}
               </div>
             );
           })}

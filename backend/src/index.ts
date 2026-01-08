@@ -4,9 +4,8 @@ import { URL } from "url";
 import { pool } from "./db.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import pkg from "jsonwebtoken";
-const { JsonWebTokenError } = pkg;
-import { WebSocketServer, WebSocket } from "ws";
+
+import ws from "./ws.js";
 config();
 
 // pool.query(`CREATE TABLE users(
@@ -17,7 +16,7 @@ config();
 // )`,()=>{console.log("Done");
 // })
 const PORT = process.env.PORT;
-const JWT_SECRET = process.env.SECRET;
+export const JWT_SECRET = process.env.SECRET;
 const server = http.createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -105,127 +104,6 @@ const server = http.createServer((req, res) => {
   res.statusCode = 404;
   res.end("Not Found");
 });
+ws(server)
 server.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
-type Message =
-  | {
-      type: "join";
-      roomId: string;
-    }
-  | {
-      type: "chat";
-      message: string;
-    }
-  | {
-      type: "exit";
-    };
-const ws = new WebSocketServer({ server }, () => {
-  console.log("Socket server running ");
-});
-const heartBeat = setInterval(() => {
-  ws.clients.forEach((socket) => {
-    const s = socket as any;
-    if (s.isAlive === false) return socket.terminate();
-    s.isAlive = false;
-    socket.ping();
-  });
-}, 30_000);
-
-const roomToSockets = new Map<string, Set<WebSocket>>();
-const socketsToRoom = new Map<WebSocket, string>();
-const cleanup = (socket: WebSocket) => {
-  const roomId = socketsToRoom.get(socket);
-  socketsToRoom.delete(socket);
-  if (!roomId) return;
-  const sockets = roomToSockets.get(roomId);
-  sockets?.delete(socket);
-  if (sockets?.size === 0) roomToSockets.delete(roomId);
-};
-interface AuthedSocket extends WebSocket {
-  user?: {
-    userId: string;
-    email: string;
-    name:string
-  };
-}
-
-ws.on("connection", (socket: AuthedSocket, req) => {
-  try {
-    const token = new URL(
-      req.url!,
-      `http://${req.headers.host}`
-    ).searchParams.get("token");
-    if (!token) {
-      socket.close(4001, "Not authorized!");
-      return;
-    }
-    const decoded = jwt.verify(token, JWT_SECRET!) as {
-      userId: string;
-      email: string;
-      name:string
-    };
-    socket.user = {
-      userId: decoded.userId,
-      email: decoded.email,
-      name:decoded.name
-    };
-  } catch (err) {
-    if (err instanceof JsonWebTokenError)
-      return socket.close(4002, "Invalid token");
-    socket.close();
-    return;
-  }
-  (socket as any).isAlive = true;
-
-  socket.on("pong", () => {
-    (socket as any).isAlive = true;
-  });
-
-  socket.on("message", (event) => {
-    let parsedMessage: Message;
-    try {
-      parsedMessage = JSON.parse(event.toString());
-    } catch (error) {
-      return;
-    }
-    if (parsedMessage.type === "join") {
-      const prevRoom = socketsToRoom.get(socket);
-      if (prevRoom) roomToSockets.get(prevRoom)?.delete(socket);
-
-      if (!roomToSockets.has(parsedMessage.roomId)) {
-        roomToSockets.set(parsedMessage.roomId, new Set());
-      }
-      roomToSockets.get(parsedMessage.roomId)?.add(socket);
-      socketsToRoom.set(socket, parsedMessage.roomId);
-    }
-
-    if (parsedMessage.type === "chat") {
-      const roomId = socketsToRoom.get(socket);
-      if (!roomId) return;
-      if (!parsedMessage.message || typeof parsedMessage.message !== "string")
-        return;
-
-      roomToSockets.get(roomId)?.forEach((v) => {
-        console.log(parsedMessage.message);
-        if (v != socket)
-          v.send(
-            JSON.stringify({
-              message: parsedMessage.message,
-              email: socket.user?.email,
-              name:socket.user?.name,
-              timestamp:new Date()
-            })
-          );
-      });
-    }
-    if (parsedMessage.type === "exit") {
-      cleanup(socket);
-    }
-  });
-  socket.on("close", () => {
-    cleanup(socket);
-  });
-});
-ws.on("close", () => {
-  clearInterval(heartBeat);
-});
