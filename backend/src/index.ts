@@ -40,7 +40,7 @@ const server = http.createServer((req, res) => {
       try {
         const { email, password } = JSON.parse(body);
         const result = await pool.query(
-          "SELECT id, password_hashed name FROM users WHERE email = $1",
+          "SELECT id, password_hashed, name FROM users WHERE email = $1",
           [email]
         );
         if (result.rowCount === 0) {
@@ -54,7 +54,7 @@ const server = http.createServer((req, res) => {
           return res.end("Invalid credentials");
         }
 
-        const token = jwt.sign({ userId: user.id, email,name }, JWT_SECRET!);
+        const token = jwt.sign({ userId: user.id, email,name:user.name }, JWT_SECRET!);
 
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ token }));
