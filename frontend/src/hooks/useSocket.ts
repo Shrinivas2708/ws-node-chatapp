@@ -6,7 +6,15 @@ interface MessageType {
   timestamp?: Date;
   name?: string;
 }
-
+interface IncomingMessageType{
+  message: string;
+  sender: {
+    userId: string;
+    email: string;
+    name: string;
+  };
+  timestamp: Date;
+}
 const useSocket = (url: string) => {
   const socket = useRef<WebSocket>(null);
   const [totalMessage, setTotalMessage] = useState<MessageType[]>([]);
@@ -26,20 +34,15 @@ const useSocket = (url: string) => {
       setSocketSet(WebSocket.CLOSED);
     };
     socket.current.onmessage = (ev) => {
-      const data = JSON.parse(ev.data) as {
-        message: string;
-        email: string;
-        timestamp: Date;
-        name: string;
-      };
+      const data = JSON.parse(ev.data) as IncomingMessageType
 
       setTotalMessage((prev) => [
         ...prev,
         {
           type: "socket",
           message: data.message,
-          email: data.email,
-          name: data.name,
+          email: data.sender.email,
+          name: data.sender.name,
           timestamp: new Date(data.timestamp),
         },
       ]);
