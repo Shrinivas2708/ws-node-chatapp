@@ -12,6 +12,7 @@ function Chat() {
   const inputRef = useRef<HTMLInputElement>(null);
   const divRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const lastTypingSent = useRef<number>(0);
   useEffect(() => {
     if (divRef.current) {
       divRef.current.scrollIntoView({ behavior: "smooth" });
@@ -69,6 +70,21 @@ function Chat() {
     );
     navigate("/");
   };
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUserMessage(e.target.value);
+
+    // 2. Throttle Logic
+    const now = Date.now();
+    // Only send if 2 seconds have passed since the last event
+    if (now - lastTypingSent.current > 2000) {
+      if (socketState === WebSocket.OPEN) {
+        sendMessage(JSON.stringify({
+          type: "typing",
+        }));
+        lastTypingSent.current = now;
+      }
+    }
+  };
   return (
     <div className="bg-black min-h-screen w-full text-white flex justify-center">
       <div className="flex flex-col w-full max-w-3xl min-h-screen px-2 sm:px-4">
@@ -90,7 +106,7 @@ function Chat() {
                 <p className="p-2 px-3 border border-white/30 rounded-full ">
                   {msg.message}
                 </p>
-                {isSocket ? <p className="text-xs text-white/80 invisible group-hover:visible">sent by {msg.name} at  {msg.timestamp?.toTimeString().split(" ")[0]}</p> : <p className="text-xs text-white/80">{msg.timestamp?.toTimeString().split(" ")[0]}</p>}
+                {isSocket ? <p className="text-xs text-white/80 ">sent by {msg.name} at  {msg.timestamp?.toTimeString().split(" ")[0]}</p> : <p className="text-xs text-white/80">{msg.timestamp?.toTimeString().split(" ")[0]}</p>}
               </div>
             );
           })}
@@ -101,7 +117,7 @@ function Chat() {
             type="text"
             placeholder="Type a message..."
             className="flex-1 rounded-md px-3 py-2 bg-black ring-1 ring-white/20 focus:outline-none focus:ring-white/40"
-            onChange={(e) => setUserMessage(e.target.value)}
+            onChange={handleInputChange}
             ref={inputRef}
             onKeyDown={handleKey}
           />

@@ -24,7 +24,11 @@ type Message =
     }
   | {
       type: "exit";
-    };
+    }
+  | {
+    type:"typing"
+
+  }
 const roomToSockets = new Map<string, Set<WebSocket>>();
 const socketsToRoom = new Map<WebSocket, string>();
 const subscribedRooms = new Set<string>();
@@ -152,7 +156,15 @@ export default function ws(server: http.Server) {
 
         pub.publish(`room:${roomId}`, JSON.stringify(event));
       }
-
+      if(parsedMessage.type === "typing"){
+         const roomId = socketsToRoom.get(socket)
+         if(!roomId) return
+         const event = {
+          typing:"typing",
+          sender:socket.user!
+         }
+         pub.publish(`room:${roomId}`,JSON.stringify(event))
+      }
       if (parsedMessage.type === "exit") {
         cleanup(socket);
       }
