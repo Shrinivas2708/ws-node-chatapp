@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import ExitIcon from "./assets/Exit";
 
 function Chat() {
-  const { sendMessage, socketState, totalMessage, setTotalMessage } = useSocket(
+  const { sendMessage, socketState, totalMessage, setTotalMessage,typingUsers } = useSocket(
     `ws://localhost:5000?token=${localStorage.getItem("token")}`
   );
   const params = useParams();
@@ -112,7 +112,12 @@ function Chat() {
           })}
           <div ref={divRef} />
         </div>
+         <div>{
+          typingUsers.size > 0 && <p>{Array.from(typingUsers).join(",")} {typingUsers.size > 1 ? "are" : "is"} typing...</p>
+          }
+          </div>
         <div className="sticky bottom-0 bg-black flex gap-2 ">
+         
           <input
             type="text"
             placeholder="Type a message..."

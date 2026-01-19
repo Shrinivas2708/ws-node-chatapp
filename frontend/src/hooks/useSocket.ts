@@ -7,7 +7,8 @@ interface MessageType {
   name?: string;
 }
 interface IncomingMessageType{
-  message: string;
+  message: string
+  type:"chat" | "typing"
   sender: {
     userId: string;
     email: string;
@@ -19,6 +20,8 @@ const useSocket = (url: string) => {
   const socket = useRef<WebSocket>(null);
   const [totalMessage, setTotalMessage] = useState<MessageType[]>([]);
   const [socketState, setSocketSet] = useState<number>(WebSocket.CLOSED);
+  const [typingUsers,setTypingUsers] = useState<Set<string>>(new Set())
+  const typingTimeouts = useRef<{ [key: string]: number }>({});
   const sendMessage = (m: string) => {
     if (socket.current) {
       socket.current.send(m);
@@ -35,8 +38,31 @@ const useSocket = (url: string) => {
     };
     socket.current.onmessage = (ev) => {
       const data = JSON.parse(ev.data) as IncomingMessageType
+      if(data.type === "typing")
+        {const userName = data.sender.name;
 
-      setTotalMessage((prev) => [
+        setTypingUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(userName);
+          return newSet;
+        });
+
+        if (typingTimeouts.current[userName]) {
+          clearTimeout(typingTimeouts.current[userName]);
+        }
+
+        typingTimeouts.current[userName] = window.setTimeout(() => {
+          setTypingUsers((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(userName);
+            return newSet;
+          });
+          delete typingTimeouts.current[userName];
+        }, 3000);
+        
+        return; 
+      }else{
+        setTotalMessage((prev) => [
         ...prev,
         {
           type: "socket",
@@ -46,6 +72,8 @@ const useSocket = (url: string) => {
           timestamp: new Date(data.timestamp),
         },
       ]);
+      }
+      
     };
 
     socket.current.onerror = (error) => {
@@ -57,7 +85,7 @@ const useSocket = (url: string) => {
     };
   }, [url]);
 
-  return { sendMessage, totalMessage, socketState, setTotalMessage };
+  return { sendMessage, totalMessage, socketState, setTotalMessage,typingUsers };
 };
 
 export default useSocket;

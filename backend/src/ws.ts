@@ -160,8 +160,10 @@ export default function ws(server: http.Server) {
          const roomId = socketsToRoom.get(socket)
          if(!roomId) return
          const event = {
-          typing:"typing",
-          sender:socket.user!
+          type:"typing",
+          roomId,
+          sender:socket.user!,
+          senderSocketId: socket.id,
          }
          pub.publish(`room:${roomId}`,JSON.stringify(event))
       }
