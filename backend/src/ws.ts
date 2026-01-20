@@ -26,9 +26,14 @@ type Message =
       type: "exit";
     }
   | {
-    type:"typing"
-
-  }
+      type: "typing";
+    }
+  | {
+      type: "user_joined";
+    }
+  | {
+      type: "user_left";
+    };
 const roomToSockets = new Map<string, Set<WebSocket>>();
 const socketsToRoom = new Map<WebSocket, string>();
 const subscribedRooms = new Set<string>();
@@ -81,7 +86,7 @@ export default function ws(server: http.Server) {
     try {
       const token = new URL(
         req.url!,
-        `http://${req.headers.host}`
+        `http://${req.headers.host}`,
       ).searchParams.get("token");
       if (!token) {
         socket.close(4001, "Not authorized!");
@@ -125,26 +130,19 @@ export default function ws(server: http.Server) {
         roomToSockets.get(parsedMessage.roomId)?.add(socket);
         socketsToRoom.set(socket, parsedMessage.roomId);
         subscribeRoom(parsedMessage.roomId);
+        const roomId = socketsToRoom.get(socket);
+        const event = {
+          type: "user_joined",
+          roomId,
+          sender: socket.user,
+          senderSocketId: socket.id,
+        };
+        pub.publish(`room:${roomId}`, JSON.stringify(event));
       }
 
       if (parsedMessage.type === "chat") {
         const roomId = socketsToRoom.get(socket);
         if (!roomId) return;
-        // if (!parsedMessage.message || typeof parsedMessage.message !== "string")
-        //   return;
-
-        // roomToSockets.get(roomId)?.forEach((v) => {
-        //   console.log(parsedMessage.message);
-        //   if (v != socket)
-        //     v.send(
-        //       JSON.stringify({
-        //         message: parsedMessage.message,
-        //         email: socket.user?.email,
-        //         name: socket.user?.name,
-        //         timestamp: new Date(),
-        //       })
-        //     );
-        // });
         const event = {
           roomId,
           message: parsedMessage.message,
@@ -156,17 +154,42 @@ export default function ws(server: http.Server) {
 
         pub.publish(`room:${roomId}`, JSON.stringify(event));
       }
-      if(parsedMessage.type === "typing"){
-         const roomId = socketsToRoom.get(socket)
-         if(!roomId) return
-         const event = {
-          type:"typing",
+      if (parsedMessage.type === "typing") {
+        const roomId = socketsToRoom.get(socket);
+        if (!roomId) return;
+        const event = {
+          type: "typing",
           roomId,
-          sender:socket.user!,
+          sender: socket.user!,
           senderSocketId: socket.id,
-         }
-         pub.publish(`room:${roomId}`,JSON.stringify(event))
+        };
+        pub.publish(`room:${roomId}`, JSON.stringify(event));
       }
+
+      if (parsedMessage.type === "user_joined") {
+        const roomId = socketsToRoom.get(socket);
+        if (!roomId) return;
+        const event = {
+          type: "user_joined",
+          roomId,
+          sender: socket.user,
+          senderSocketId: socket.id,
+        };
+        pub.publish(`room:${roomId}`, JSON.stringify(event));
+      }
+
+      if (parsedMessage.type === "user_left") {
+        const roomId = socketsToRoom.get(socket);
+        if (!roomId) return;
+        const event = {
+          type: "user_left",
+          roomId,
+          sender: socket.user,
+          senderSocketId: socket.id,
+        };
+        pub.publish(`room:${roomId}`, JSON.stringify(event));
+      }
+
       if (parsedMessage.type === "exit") {
         cleanup(socket);
       }

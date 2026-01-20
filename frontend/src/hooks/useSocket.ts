@@ -8,19 +8,25 @@ interface MessageType {
 }
 interface IncomingMessageType{
   message: string
-  type:"chat" | "typing"
+  type:"chat" | "typing" | "user_joined" | "user_left"
   sender: {
     userId: string;
     email: string;
     name: string;
   };
+  senderSocketId:string
   timestamp: Date;
+}
+export interface JoinedUserType{
+  id:string,
+  name:string
 }
 const useSocket = (url: string) => {
   const socket = useRef<WebSocket>(null);
   const [totalMessage, setTotalMessage] = useState<MessageType[]>([]);
   const [socketState, setSocketSet] = useState<number>(WebSocket.CLOSED);
   const [typingUsers,setTypingUsers] = useState<Set<string>>(new Set())
+  const [lastJoinedUser, setLastJoinedUser] = useState<JoinedUserType>();
   const typingTimeouts = useRef<{ [key: string]: number }>({});
   const sendMessage = (m: string) => {
     if (socket.current) {
@@ -29,9 +35,10 @@ const useSocket = (url: string) => {
   };
   useEffect(() => {
     socket.current = new WebSocket(url);
-
+    
     socket.current.onopen = () => {
       setSocketSet(WebSocket.OPEN);
+      
     };
     socket.current.onclose = () => {
       setSocketSet(WebSocket.CLOSED);
@@ -61,7 +68,17 @@ const useSocket = (url: string) => {
         }, 3000);
         
         return; 
-      }else{
+      }
+      
+      if(data.type === "user_joined"){
+        setLastJoinedUser({
+          id:data.senderSocketId,
+          name:data.sender.name
+        });
+        return;
+      } 
+        
+        if(data.type === "chat"){
         setTotalMessage((prev) => [
         ...prev,
         {
@@ -77,15 +94,17 @@ const useSocket = (url: string) => {
     };
 
     socket.current.onerror = (error) => {
+      sendMessage(JSON.stringify({type:"user_left"}))
       console.log(error);
     };
 
     return () => {
+      sendMessage(JSON.stringify({type:"user_left"}))
       socket.current?.close();
     };
   }, [url]);
 
-  return { sendMessage, totalMessage, socketState, setTotalMessage,typingUsers };
+  return { sendMessage, totalMessage, socketState, setTotalMessage,typingUsers,lastJoinedUser };
 };
 
 export default useSocket;

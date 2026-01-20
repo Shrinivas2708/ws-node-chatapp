@@ -1,10 +1,10 @@
 import { useNavigate, useParams } from "react-router-dom";
-import useSocket from "./hooks/useSocket";
+import useSocket, { type JoinedUserType } from "./hooks/useSocket";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import ExitIcon from "./assets/Exit";
 
 function Chat() {
-  const { sendMessage, socketState, totalMessage, setTotalMessage,typingUsers } = useSocket(
+  const { sendMessage, socketState, totalMessage, setTotalMessage,typingUsers,lastJoinedUser } = useSocket(
     `ws://localhost:5000?token=${localStorage.getItem("token")}`
   );
   const params = useParams();
@@ -13,6 +13,10 @@ function Chat() {
   const divRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const lastTypingSent = useRef<number>(0);
+   const [showCard, setShowCard] = useState(false);
+  const [cardName, setCardName] = useState<JoinedUserType>();
+
+  const cardTimeout = useRef<number | null>(null);
   useEffect(() => {
     if (divRef.current) {
       divRef.current.scrollIntoView({ behavior: "smooth" });
@@ -26,8 +30,25 @@ function Chat() {
         roomId: `${params.roomid}`,
       })
     );
+    sendMessage(JSON.stringify({type:"user_joined"}))
   }, [socketState]);
+useEffect(() => {
+    if (!lastJoinedUser) return;
 
+    function set(){
+      setCardName(lastJoinedUser);
+    setShowCard(true);
+    }
+    set()
+    if (cardTimeout.current) {
+      clearTimeout(cardTimeout.current);
+    }
+
+    cardTimeout.current = window.setTimeout(() => {
+      setShowCard(false);
+      cardTimeout.current = null;
+    }, 5000);
+  }, [lastJoinedUser?.id]);
   useEffect(() => {
     if (!localStorage.getItem("token")) navigate("/login");
   }, []);
@@ -73,9 +94,7 @@ function Chat() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUserMessage(e.target.value);
 
-    // 2. Throttle Logic
     const now = Date.now();
-    // Only send if 2 seconds have passed since the last event
     if (now - lastTypingSent.current > 2000) {
       if (socketState === WebSocket.OPEN) {
         sendMessage(JSON.stringify({
@@ -87,12 +106,17 @@ function Chat() {
   };
   return (
     <div className="bg-black min-h-screen w-full text-white flex justify-center">
+       {showCard && (
+        <div className="absolute top-4 left-4 border px-4 py-2 rounded">
+          {cardName?.name} joined
+        </div>
+      )}
       <div className="flex flex-col w-full max-w-3xl min-h-screen px-2 sm:px-4">
         <div
           className="flex border border-red-400 text-red-400 fixed p-1 rounded gap-2 justify-center items-center right-5 top-3 cursor-pointer "
           onClick={handleLeave}
         >
-          Leave <ExitIcon size={20} />{" "}
+           Leave <ExitIcon size={20} />
         </div>
         <div className="flex-1 overflow-y-auto border-x border-white/10 py-3 px-2 ">
           {totalMessage.map((msg, id) => {
