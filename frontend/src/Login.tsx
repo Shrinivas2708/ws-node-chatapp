@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, {  useEffect, useState } from "react";
+import  {  useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
@@ -16,14 +16,14 @@ function Login() {
       console.log(res.data);
       const { token } = res.data;
       localStorage.setItem("token", token);
-      navigate("/");
+      navigate("/room");
     } catch (error) {
       console.log(error);
     }
   };
   useEffect(()=>{
     if(localStorage.getItem("token")){
-        navigate("/")
+        navigate("/room")
     }
   },[])
   return (
